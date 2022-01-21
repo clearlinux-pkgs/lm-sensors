@@ -1,22 +1,63 @@
---- lm-sensors-3-5-0/Makefile~	2018-11-23 17:05:48.000000000 +0000
-+++ lm-sensors-3-5-0/Makefile	2018-12-31 14:42:43.713285369 +0000
-@@ -42,7 +42,7 @@
- DESTDIR :=
+diff --git a/prog/init/fancontrol.service b/prog/init/fancontrol.service
+index 3ac1ed0..0f16518 100644
+--- a/prog/init/fancontrol.service
++++ b/prog/init/fancontrol.service
+@@ -6,7 +6,7 @@ After=lm_sensors.service
+ [Service]
+ Type=simple
+ PIDFile=/var/run/fancontrol.pid
+-ExecStart=/usr/sbin/fancontrol
++ExecStart=/usr/bin/fancontrol
  
- # This is the prefix that will be used for almost all directories below.
--PREFIX := /usr/local
-+PREFIX := /usr
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/prog/init/lm_sensors.service b/prog/init/lm_sensors.service
+index 7d3bf80..2bccc85 100644
+--- a/prog/init/lm_sensors.service
++++ b/prog/init/lm_sensors.service
+@@ -2,12 +2,12 @@
+ Description=Initialize hardware monitoring sensors
  
- # Your C compiler
- CC := gcc
---- lm-sensors-3-5-0/Makefile~	2018-12-31 14:42:43.000000000 +0000
-+++ lm-sensors-3-5-0/Makefile	2018-12-31 14:46:29.168282230 +0000
-@@ -53,7 +53,7 @@
+ [Service]
+-EnvironmentFile=/etc/sysconfig/lm_sensors
++EnvironmentFile=-/etc/sysconfig/lm_sensors
+ Type=oneshot
+ RemainAfterExit=yes
+-ExecStart=-/sbin/modprobe -qab $BUS_MODULES $HWMON_MODULES
++ExecStart=-/usr/bin/modprobe -qab $BUS_MODULES $HWMON_MODULES
+ ExecStart=/usr/bin/sensors -s
+-ExecStop=-/sbin/modprobe -qabr $BUS_MODULES $HWMON_MODULES
++ExecStop=-/usr/bin/modprobe -qabr $BUS_MODULES $HWMON_MODULES
  
- # You should not need to change this. It is the directory into which the
- # library files (both static and shared) will be installed.
--LIBDIR := $(PREFIX)/lib
-+LIBDIR := $(PREFIX)/lib64
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/prog/init/sensord.service b/prog/init/sensord.service
+index 2448bee..c0f43be 100644
+--- a/prog/init/sensord.service
++++ b/prog/init/sensord.service
+@@ -3,10 +3,10 @@ Description=Log hardware monitoring data
+ After=lm_sensors.service
  
- EXLDFLAGS := -Wl,-rpath,$(LIBDIR)
+ [Service]
+-EnvironmentFile=/etc/sysconfig/sensord
++EnvironmentFile=-/etc/sysconfig/sensord
+ Type=forking
+ PIDFile=/var/run/sensord.pid
+-ExecStart=/usr/sbin/sensord -i $INTERVAL -l $LOG_INTERVAL -f daemon
++ExecStart=/usr/bin/sensord -i $INTERVAL -l $LOG_INTERVAL -f daemon
+ 
+ [Install]
+ WantedBy=multi-user.target
+diff --git a/prog/sensors/Module.mk b/prog/sensors/Module.mk
+index b656441..45a32fe 100644
+--- a/prog/sensors/Module.mk
++++ b/prog/sensors/Module.mk
+@@ -37,8 +37,6 @@ INCLUDEFILES += $(PROGSENSORSSOURCES:.c=.rd)
+ REMOVESENSORSBIN := $(patsubst $(MODULE_DIR)/%,$(DESTDIR)$(BINDIR)/%,$(PROGSENSORSTARGETS))
+ REMOVESENSORSMAN := $(patsubst $(MODULE_DIR)/%,$(DESTDIR)$(PROGSENSORSMAN1DIR)/%,$(PROGSENSORSMAN1FILES))
+ 
+-LIBICONV := $(shell if /sbin/ldconfig -p | grep -q '/libiconv\.so$$' ; then echo \-liconv; else echo; fi)
+-
+ $(PROGSENSORSTARGETS): $(PROGSENSORSSOURCES:.c=.ro) lib/$(LIBSHBASENAME)
+ 	$(CC) $(EXLDFLAGS) -o $@ $(PROGSENSORSSOURCES:.c=.ro) $(LIBICONV) -Llib -lsensors
  
